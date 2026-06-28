@@ -1,0 +1,213 @@
+// ============================================================
+// Wedding Digital Invitation — Database Schema
+// Scoped for a single-wedding production deployment.
+// (Multi-tenant fields are intentionally omitted; see README
+// for the migration path to multi-tenant if needed later.)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------------------------------
+// Core wedding profile — singleton-ish, but modeled as a table
+// so the schema survives a future move to multi-tenant cleanly.
+// --------------------------------------------------------------
+model Wedding {
+  id            String   @id @default(cuid())
+  slug          String   @unique // used for custom domain / subdomain mapping
+  groomName     String
+  groomNickname String
+  brideName     String
+  brideNickname String
+  weddingDate   DateTime
+  coverQuote    String?
+  isPublished   Boolean  @default(false)
+  invitationPin String? // optional PIN-gated access
+  themeColor    String   @default("ivory-gold")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  groomParents  String?
+  brideParents  String?
+  groomInstagram String?
+  brideInstagram String?
+  groomStory    String? @db.Text
+  brideStory    String? @db.Text
+
+  events      Event[]
+  loveStories LoveStory[]
+  galleries   GalleryItem[]
+  guests      Guest[]
+  wishes      Wish[]
+  gifts       GiftAccount[]
+  visits      Visit[]
+}
+
+// --------------------------------------------------------------
+// Akad / Resepsi / Ngunduh Mantu — each is one row
+// --------------------------------------------------------------
+model Event {
+  id          String   @id @default(cuid())
+  weddingId   String
+  wedding     Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  type        EventType
+  title       String
+  startAt     DateTime
+  endAt       DateTime?
+  venueName   String
+  venueAddress String  @db.Text
+  mapsUrl     String?
+  latitude    Float?
+  longitude   Float?
+  order       Int      @default(0)
+}
+
+enum EventType {
+  AKAD
+  RESEPSI
+  NGUNDUH_MANTU
+  CUSTOM
+}
+
+// --------------------------------------------------------------
+// Love Story timeline
+// --------------------------------------------------------------
+model LoveStory {
+  id          String   @id @default(cuid())
+  weddingId   String
+  wedding     Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  title       String
+  description String   @db.Text
+  date        DateTime?
+  imageUrl    String?
+  order       Int      @default(0)
+}
+
+// --------------------------------------------------------------
+// Gallery (photo + video)
+// --------------------------------------------------------------
+model GalleryItem {
+  id        String      @id @default(cuid())
+  weddingId String
+  wedding   Wedding     @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  type      MediaType   @default(PHOTO)
+  url       String
+  thumbUrl  String?
+  caption   String?
+  order     Int         @default(0)
+  createdAt DateTime    @default(now())
+}
+
+enum MediaType {
+  PHOTO
+  VIDEO
+}
+
+// --------------------------------------------------------------
+// Guests + RSVP
+// --------------------------------------------------------------
+model Guest {
+  id           String        @id @default(cuid())
+  weddingId    String
+  wedding      Wedding       @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  name         String
+  whatsapp     String?
+  group        String?       // e.g. "Keluarga", "Kantor", "Teman Kuliah"
+  invitedCount Int           @default(1)
+  attendance   Attendance    @default(PENDING)
+  attendingQty Int?
+  message      String?       @db.Text
+  checkedInAt  DateTime?
+  qrCode       String?       @unique
+  source       String?       // "url" | "import" | "manual"
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+enum Attendance {
+  PENDING
+  ATTENDING
+  NOT_ATTENDING
+}
+
+// --------------------------------------------------------------
+// Wishes / Ucapan wall (public, moderated)
+// --------------------------------------------------------------
+model Wish {
+  id          String   @id @default(cuid())
+  weddingId   String
+  wedding     Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  guestName   String
+  message     String   @db.Text
+  emoji       String?
+  likeCount   Int      @default(0)
+  adminReply  String?  @db.Text
+  isHidden    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// --------------------------------------------------------------
+// Digital gifts
+// --------------------------------------------------------------
+model GiftAccount {
+  id          String      @id @default(cuid())
+  weddingId   String
+  wedding     Wedding     @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  type        GiftType
+  bankName    String?
+  accountName String?
+  accountNumber String?
+  qrImageUrl  String?
+  address     String?     @db.Text
+  order       Int         @default(0)
+}
+
+enum GiftType {
+  BANK_TRANSFER
+  QRIS
+  GOPAY
+  OVO
+  DANA
+  SHOPEEPAY
+  PHYSICAL_ADDRESS
+}
+
+// --------------------------------------------------------------
+// Visit analytics (lightweight, Redis handles hot counters;
+// this table is the durable log)
+// --------------------------------------------------------------
+model Visit {
+  id        String   @id @default(cuid())
+  weddingId String
+  wedding   Wedding  @relation(fields: [weddingId], references: [id], onDelete: Cascade)
+  guestName String?
+  device    String?
+  browser   String?
+  country   String?
+  city      String?
+  userAgent String?  @db.Text
+  createdAt DateTime @default(now())
+}
+
+// --------------------------------------------------------------
+// Admin user
+// --------------------------------------------------------------
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  passwordHash String
+  role      AdminRole @default(ADMIN)
+  createdAt DateTime @default(now())
+}
+
+enum AdminRole {
+  OWNER
+  ADMIN
+}

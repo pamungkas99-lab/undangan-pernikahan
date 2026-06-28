@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold-thread: linear-gradient(90deg, transparent, #C9A66B 20%, #E3CC9E 50%, #C9A66B 80%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FAF6EE;
+  color: #1A1714;
+}
+
+/* Signature element: the gold thread that links Love Story moments */
+.gold-thread {
+  position: relative;
+}
+.gold-thread::before {
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gold-thread);
+  opacity: 0.7;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(90deg, #C9A66B, #E3CC9E, #C9A66B);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: rgba(250, 246, 238, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(201, 166, 107, 0.25);
+}
+
+::selection {
+  background: #C9A66B;
+  color: #FAF6EE;
+}
+
+:focus-visible {
+  outline: 2px solid #C9A66B;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom scrollbar — subtle, on-brand */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF6EE;
+}
+::-webkit-scrollbar-thumb {
+  background: #C9A66B;
+  border-radius: 8px;
+}
